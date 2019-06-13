@@ -1,0 +1,166 @@
+﻿schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type FitnessData {
+  endDate: AWSDateTime!
+  id: ID!
+  memberId: String!
+  startDate: AWSDateTime!
+  type: String!
+  value: [Int]!
+}
+
+type FitnessDataConnection {
+  items: [FitnessData]
+  nextToken: String
+}
+
+type LastUpdatedTime {
+  id: ID!
+  member: String!
+  timestamp: AWSDate!
+  type: String!
+}
+
+type LastUpdatedTimeConnection {
+  items: [LastUpdatedTime]
+  nextToken: String
+}
+
+type Mutation {
+  createFitnessData(input: CreateFitnessDataInput!): FitnessData
+  createLastUpdatedTime(input: CreateLastUpdatedTimeInput!): LastUpdatedTime
+  deleteFitnessData(input: DeleteFitnessDataInput!): FitnessData
+  deleteLastUpdatedTime(input: DeleteLastUpdatedTimeInput!): LastUpdatedTime
+  updateFitnessData(input: UpdateFitnessDataInput!): FitnessData
+  updateLastUpdatedTime(input: UpdateLastUpdatedTimeInput!): LastUpdatedTime
+}
+
+type Query {
+  getFitnessData(id: ID!): FitnessData
+  getLastUpdatedTime(member: String!, type: String!): LastUpdatedTime
+  listFitnessData(filter: TableFitnessDataFilterInput, limit: Int, nextToken: String): FitnessDataConnection
+  listLastUpdatedTimes(filter: TableLastUpdatedTimeFilterInput, limit: Int, nextToken: String): LastUpdatedTimeConnection
+}
+
+type Subscription {
+  onCreateFitnessData(endDate: AWSDateTime, id: ID, memberId: String, startDate: AWSDateTime, value: [Int]): FitnessData @aws_subscribe(mutations : ["createFitnessData"])
+  onCreateLastUpdatedTime(id: ID, member: String, timestamp: AWSDate, type: String): LastUpdatedTime @aws_subscribe(mutations : ["createLastUpdatedTime"])
+  onDeleteFitnessData(endDate: AWSDateTime, id: ID, memberId: String, startDate: AWSDateTime, value: [Int]): FitnessData @aws_subscribe(mutations : ["deleteFitnessData"])
+  onDeleteLastUpdatedTime(id: ID, member: String, timestamp: AWSDate, type: String): LastUpdatedTime @aws_subscribe(mutations : ["deleteLastUpdatedTime"])
+  onUpdateFitnessData(endDate: AWSDateTime, id: ID, memberId: String, startDate: AWSDateTime, value: [Int]): FitnessData @aws_subscribe(mutations : ["updateFitnessData"])
+  onUpdateLastUpdatedTime(id: ID, member: String, timestamp: AWSDate, type: String): LastUpdatedTime @aws_subscribe(mutations : ["updateLastUpdatedTime"])
+}
+
+input CreateFitnessDataInput {
+  endDate: AWSDateTime!
+  id: ID!
+  memberId: String!
+  startDate: AWSDateTime!
+  type: String!
+  value: [Int]!
+}
+
+input CreateLastUpdatedTimeInput {
+  member: String!
+  timestamp: AWSDate!
+  type: String!
+}
+
+input DeleteFitnessDataInput {
+  id: ID!
+}
+
+input DeleteLastUpdatedTimeInput {
+  id: ID!
+}
+
+input TableBooleanFilterInput {
+  eq: Boolean
+  ne: Boolean
+}
+
+input TableFitnessDataFilterInput {
+  endDate: TableStringFilterInput
+  id: TableIDFilterInput
+  memberId: TableStringFilterInput
+  startDate: TableStringFilterInput
+  type: TableStringFilterInput
+  value: TableIntFilterInput
+}
+
+input TableFloatFilterInput {
+  between: [Float]
+  contains: Float
+  eq: Float
+  ge: Float
+  gt: Float
+  le: Float
+  lt: Float
+  ne: Float
+  notContains: Float
+}
+
+input TableIDFilterInput {
+  beginsWith: ID
+  between: [ID]
+  contains: ID
+  eq: ID
+  ge: ID
+  gt: ID
+  le: ID
+  lt: ID
+  ne: ID
+  notContains: ID
+}
+
+input TableIntFilterInput {
+  between: [Int]
+  contains: Int
+  eq: Int
+  ge: Int
+  gt: Int
+  le: Int
+  lt: Int
+  ne: Int
+  notContains: Int
+}
+
+input TableLastUpdatedTimeFilterInput {
+  id: TableIDFilterInput
+  member: TableStringFilterInput
+  timestamp: TableStringFilterInput
+  type: TableStringFilterInput
+}
+
+input TableStringFilterInput {
+  beginsWith: String
+  between: [String]
+  contains: String
+  eq: String
+  ge: String
+  gt: String
+  le: String
+  lt: String
+  ne: String
+  notContains: String
+}
+
+input UpdateFitnessDataInput {
+  endDate: AWSDateTime
+  id: ID!
+  memberId: String
+  startDate: AWSDateTime
+  type: String
+  value: [Int]
+}
+
+input UpdateLastUpdatedTimeInput {
+  id: ID!
+  member: String
+  timestamp: AWSDate
+  type: String
+}

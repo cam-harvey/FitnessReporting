@@ -1,0 +1,58 @@
+# this is an auto generated file. This will be overwritten
+query GetFitnessData($id: ID!) {
+  getFitnessData(id: $id) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+query ListFitnessData(
+  $filter: TableFitnessDataFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listFitnessData(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      memberId
+      startDate
+      endDate
+      value
+      type
+    }
+    nextToken
+  }
+}
+query GetLastUpdatedTime(
+  $filter: TableLastUpdatedTimeFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  getLastUpdatedTime(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      member
+      timestamp
+      type
+    }
+    nextToken
+  }
+}
+query ListLastUpdatedTimes(
+  $filter: TableLastUpdatedTimeFilterInput
+  $limit: Int
+  $nextToken: String
+) {
+  listLastUpdatedTimes(filter: $filter, limit: $limit, nextToken: $nextToken) {
+    items {
+      id
+      member
+      timestamp
+      type
+    }
+    nextToken
+  }
+}

@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">FitnessReporting</string>
+    <string name="main_activity_title">Fitness Data Prototype</string>
+    <string name="data_type_title">Data Type:</string>
+    <string name="spinner_steps">Steps</string>
+    <string name="spinner_sleep">Sleep</string>
+    <string name="spinner_heart_rate">Heart Rate</string>
+    <string name="spinner_blood_pressure">Blood Pressure</string>
+    <string name="last_updated">Last Updated At:</string>
+    <string name="sync_button">Sync</string>
+    <string name="last_updated_button">Find Last Updated Time</string>
+    <string name="member_id_title">Member Id:</string>
+</resources>

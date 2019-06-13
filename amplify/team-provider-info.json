@@ -1,0 +1,14 @@
+{
+    "routinify": {
+        "awscloudformation": {
+            "AuthRoleName": "fitnessreporting-routinify-20190610150241-authRole",
+            "UnauthRoleArn": "arn:aws:iam::020372687248:role/fitnessreporting-routinify-20190610150241-unauthRole",
+            "AuthRoleArn": "arn:aws:iam::020372687248:role/fitnessreporting-routinify-20190610150241-authRole",
+            "Region": "us-east-2",
+            "DeploymentBucketName": "fitnessreporting-routinify-20190610150241-deployment",
+            "UnauthRoleName": "fitnessreporting-routinify-20190610150241-unauthRole",
+            "StackName": "fitnessreporting-routinify-20190610150241",
+            "StackId": "arn:aws:cloudformation:us-east-2:020372687248:stack/fitnessreporting-routinify-20190610150241/53ac2160-8bb2-11e9-9a02-0659c08a3f80"
+        }
+    }
+}

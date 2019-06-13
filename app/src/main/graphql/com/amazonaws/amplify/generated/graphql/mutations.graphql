@@ -1,0 +1,55 @@
+# this is an auto generated file. This will be overwritten
+mutation CreateFitnessData($input: CreateFitnessDataInput!) {
+  createFitnessData(input: $input) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+mutation UpdateFitnessData($input: UpdateFitnessDataInput!) {
+  updateFitnessData(input: $input) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+mutation DeleteFitnessData($input: DeleteFitnessDataInput!) {
+  deleteFitnessData(input: $input) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+mutation CreateLastUpdatedTime($input: CreateLastUpdatedTimeInput!) {
+  createLastUpdatedTime(input: $input) {
+    id
+    member
+    timestamp
+    type
+  }
+}
+mutation UpdateLastUpdatedTime($input: UpdateLastUpdatedTimeInput!) {
+  updateLastUpdatedTime(input: $input) {
+    id
+    member
+    timestamp
+    type
+  }
+}
+mutation DeleteLastUpdatedTime($input: DeleteLastUpdatedTimeInput!) {
+  deleteLastUpdatedTime(input: $input) {
+    id
+    member
+    timestamp
+    type
+  }
+}

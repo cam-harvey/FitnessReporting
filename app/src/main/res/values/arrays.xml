@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="type_spinner_values">
+        <item></item>
+        <item>@string/spinner_blood_pressure </item>
+        <item>@string/spinner_heart_rate </item>
+        <item>@string/spinner_sleep </item>
+        <item>@string/spinner_steps </item>
+    </string-array>
+</resources>

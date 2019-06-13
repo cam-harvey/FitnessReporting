@@ -1,0 +1,121 @@
+# this is an auto generated file. This will be overwritten
+subscription OnCreateFitnessData(
+  $id: ID
+  $memberId: String
+  $startDate: AWSDateTime
+  $endDate: AWSDateTime
+  $value: [Int]
+) {
+  onCreateFitnessData(
+    id: $id
+    memberId: $memberId
+    startDate: $startDate
+    endDate: $endDate
+    value: $value
+  ) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+subscription OnUpdateFitnessData(
+  $id: ID
+  $memberId: String
+  $startDate: AWSDateTime
+  $endDate: AWSDateTime
+  $value: [Int]
+) {
+  onUpdateFitnessData(
+    id: $id
+    memberId: $memberId
+    startDate: $startDate
+    endDate: $endDate
+    value: $value
+  ) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+subscription OnDeleteFitnessData(
+  $id: ID
+  $memberId: String
+  $startDate: AWSDateTime
+  $endDate: AWSDateTime
+  $value: [Int]
+) {
+  onDeleteFitnessData(
+    id: $id
+    memberId: $memberId
+    startDate: $startDate
+    endDate: $endDate
+    value: $value
+  ) {
+    id
+    memberId
+    startDate
+    endDate
+    value
+    type
+  }
+}
+subscription OnCreateLastUpdatedTime(
+  $id: ID
+  $member: String
+  $timestamp: AWSDateTime
+  $type: String
+) {
+  onCreateLastUpdatedTime(
+    id: $id
+    member: $member
+    timestamp: $timestamp
+    type: $type
+  ) {
+    id
+    member
+    timestamp
+    type
+  }
+}
+subscription OnUpdateLastUpdatedTime(
+  $id: ID
+  $member: String
+  $timestamp: AWSDateTime
+  $type: String
+) {
+  onUpdateLastUpdatedTime(
+    id: $id
+    member: $member
+    timestamp: $timestamp
+    type: $type
+  ) {
+    id
+    member
+    timestamp
+    type
+  }
+}
+subscription OnDeleteLastUpdatedTime(
+  $id: ID
+  $member: String
+  $timestamp: AWSDateTime
+  $type: String
+) {
+  onDeleteLastUpdatedTime(
+    id: $id
+    member: $member
+    timestamp: $timestamp
+    type: $type
+  ) {
+    id
+    member
+    timestamp
+    type
+  }
+}
