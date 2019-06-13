@@ -1,9 +1,19 @@
 package com.routinify.fitnessreporting;
 
+import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHealth;
+import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -26,6 +36,10 @@ import com.amazonaws.mobileconnectors.appsync.fetcher.AppSyncResponseFetchers;
 import com.apollographql.apollo.GraphQLCall;
 import com.apollographql.apollo.api.Response;
 import com.apollographql.apollo.exception.ApolloException;
+import com.fitpolo.support.MokoSupport;
+import com.fitpolo.support.callback.MokoScanDeviceCallback;
+import com.fitpolo.support.entity.BleDevice;
+import com.fitpolo.support.handler.MokoLeScanHandler;
 
 
 import java.text.DateFormat;
@@ -35,6 +49,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,11 +61,26 @@ import type.TableLastUpdatedTimeFilterInput;
 import type.TableStringFilterInput;
 import type.UpdateLastUpdatedTimeInput;
 
-public class MainActivity extends AppCompatActivity {
+import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
+import no.nordicsemi.android.support.v18.scanner.ScanFilter;
+import no.nordicsemi.android.support.v18.scanner.ScanSettings;
+
+
+public class MainActivity extends AppCompatActivity implements MokoScanDeviceCallback {
     private AWSAppSyncClient mAWSAppSyncClient;
     private String lastUpdatedString;
     private String lastUpdatedId;
     private boolean processing;
+    private BluetoothHealth smartWatch;
+    private static final UUID SERVICE_UUID = UUID.fromString("0000ffc0-0000-1000-8000-00805f9b34fb");
+    private static final long SCAN_PERIOD = 5000;
+
+    private ArrayList<BleDevice> mDatas;
+    //private DeviceAdapter mAdapter;
+    private ProgressDialog mDialog;
+    //private MokoService mService;
+    private BleDevice mDevice;
+    private HashMap<String, BleDevice> deviceMap;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,7 +93,63 @@ public class MainActivity extends AppCompatActivity {
                 .context(getApplicationContext())
                 .awsConfiguration(new AWSConfiguration(getApplicationContext()))
                 .build();
+
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (!bluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, 1);
+        }
+        bluetoothAdapter.getProfileProxy(getApplicationContext(), profileListener, BluetoothProfile.HEALTH);
+
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(receiver, filter);
+        scan();
+
     }
+
+    private void scan(){
+        MokoSupport.getInstance().startScanDevice(this);
+    }
+
+
+
+    private BluetoothProfile.ServiceListener profileListener = new BluetoothProfile.ServiceListener() {
+        public void onServiceConnected(int profile, BluetoothProfile proxy) {
+            if (profile == BluetoothProfile.HEALTH) {
+                smartWatch = (BluetoothHealth) proxy;
+            }
+        }
+        public void onServiceDisconnected(int profile) {
+            if (profile == BluetoothProfile.HEADSET) {
+                smartWatch = null;
+            }
+        }
+    };
+
+    // Create a BroadcastReceiver for ACTION_FOUND.
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                // Discovery has found a device. Get the BluetoothDevice
+                // object and its info from the Intent.
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress(); // MAC address
+            }
+        }
+    };
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Don't forget to unregister the ACTION_FOUND receiver.
+        unregisterReceiver(receiver);
+    }
+
+
+
     public void findLastUpdated(View view){
 
         /*
@@ -87,7 +173,16 @@ public class MainActivity extends AppCompatActivity {
             //lastUpdatedText.setText(lastUpdatedString);
         }
 
-        setContentView(R.layout.activity_main);
+        ConnectivityManager cm =
+                (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if (!isConnected) {
+            finish();
+        }
     }
 
     public void sync(View view){
@@ -119,7 +214,16 @@ public class MainActivity extends AppCompatActivity {
         else{
             runCreateUpdateMutation(memberIdText,currentTimeString,dataType);
         }
-        setContentView(R.layout.activity_main);
+        ConnectivityManager cm =
+                (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if (!isConnected) {
+            finish();
+        }
     }
 
     public void runUpdateMutation(String member,String timestamp,String type){
@@ -142,9 +246,13 @@ public class MainActivity extends AppCompatActivity {
     private GraphQLCall.Callback<UpdateLastUpdatedTimeMutation.Data> mutationCallback = new GraphQLCall.Callback<UpdateLastUpdatedTimeMutation.Data>() {
         @Override
         public void onResponse(@Nonnull Response<UpdateLastUpdatedTimeMutation.Data> response) {
-            Log.i("Results", "Updated Last Update Time");
-            processing = false;
-            //Log.d("Mutation",response.data().updateLastUpdatedTime().toString());
+
+                    Log.i("Results", "Updated Last Update Time");
+                    processing = false;
+                    finish();
+
+
+
         }
 
         @Override
@@ -179,7 +287,9 @@ public class MainActivity extends AppCompatActivity {
 
     private GraphQLCall.Callback<ListLastUpdatedTimesQuery.Data> lastUpdatedTimeCallback = new GraphQLCall.Callback<ListLastUpdatedTimesQuery.Data>() {
         @Override
-        public void onResponse(@Nonnull Response<ListLastUpdatedTimesQuery.Data> response) {
+        public void onResponse(@Nonnull final Response<ListLastUpdatedTimesQuery.Data> response) {
+            Log.d("Query","Got here");
+
 
             if(response.data().listLastUpdatedTimes().items().size()!=0) {
 
@@ -192,7 +302,11 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("Results","Null result");
                 processing = false;
             }
+            finish();
         }
+
+
+
 
         @Override
         public void onFailure(@Nonnull ApolloException e) {
@@ -219,8 +333,14 @@ public class MainActivity extends AppCompatActivity {
     private GraphQLCall.Callback<CreateLastUpdatedTimeMutation.Data> createMutationCallback = new GraphQLCall.Callback<CreateLastUpdatedTimeMutation.Data>() {
         @Override
         public void onResponse(@Nonnull Response<CreateLastUpdatedTimeMutation.Data> response) {
-            Log.i("Results", "Updated Last Update Time");
-            processing = false;
+
+
+                    Log.i("Results", "Updated Last Update Time");
+                    processing = false;
+                    finish();
+
+
+
             //Log.d("Mutation",response.data().updateLastUpdatedTime().toString());
         }
 
@@ -230,4 +350,30 @@ public class MainActivity extends AppCompatActivity {
             processing = false;
         }
     };
+
+    @Override
+    public void onStartScan() {
+        deviceMap.clear();
+        mDialog.setMessage("Scanning...");
+        mDialog.show();
+    }
+
+    @Override
+    public void onScanDevice(BleDevice device) {
+        deviceMap.put(device.address, device);
+        mDatas.clear();
+        mDatas.addAll(deviceMap.values());
+        //mAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onStopScan() {
+        if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
+            mDialog.dismiss();
+        }
+        mDatas.clear();
+        mDatas.addAll(deviceMap.values());
+        Log.d("Bluetooth","Finished Scanning:");
+        //mAdapter.notifyDataSetChanged();
+    }
 }
