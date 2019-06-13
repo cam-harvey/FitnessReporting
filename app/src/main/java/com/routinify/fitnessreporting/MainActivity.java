@@ -6,13 +6,16 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHealth;
 import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -36,6 +39,7 @@ import com.amazonaws.mobileconnectors.appsync.fetcher.AppSyncResponseFetchers;
 import com.apollographql.apollo.GraphQLCall;
 import com.apollographql.apollo.api.Response;
 import com.apollographql.apollo.exception.ApolloException;
+import com.fitpolo.support.MokoConstants;
 import com.fitpolo.support.MokoSupport;
 import com.fitpolo.support.callback.MokoScanDeviceCallback;
 import com.fitpolo.support.entity.BleDevice;
@@ -56,6 +60,7 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 
+import butterknife.ButterKnife;
 import type.CreateLastUpdatedTimeInput;
 import type.TableLastUpdatedTimeFilterInput;
 import type.TableStringFilterInput;
@@ -78,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
     private ArrayList<BleDevice> mDatas;
     //private DeviceAdapter mAdapter;
     private ProgressDialog mDialog;
-    //private MokoService mService;
+    private MokoService mService;
     private BleDevice mDevice;
     private HashMap<String, BleDevice> deviceMap;
     @Override
@@ -94,20 +99,22 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
                 .awsConfiguration(new AWSConfiguration(getApplicationContext()))
                 .build();
 
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, 1);
-        }
-        bluetoothAdapter.getProfileProxy(getApplicationContext(), profileListener, BluetoothProfile.HEALTH);
+        ButterKnife.bind(this);
+        bindService(new Intent(this, MokoService.class), mServiceConnection, BIND_AUTO_CREATE);
+        mDialog = new ProgressDialog(this);
+        mDatas = new ArrayList<>();
+        deviceMap = new HashMap<>();
 
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(receiver, filter);
-        scan();
+        MokoSupport.getInstance().init(this.getApplicationContext());
+        //bluetoothAdapter.getProfileProxy(getApplicationContext(), profileListener, BluetoothProfile.HEALTH);
+
+        //IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        //registerReceiver(mReceiver, filter);
 
     }
 
-    private void scan(){
+    public void scan(View view){
+
         MokoSupport.getInstance().startScanDevice(this);
     }
 
@@ -127,16 +134,50 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
     };
 
     // Create a BroadcastReceiver for ACTION_FOUND.
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+
+        @Override
         public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                // Discovery has found a device. Get the BluetoothDevice
-                // object and its info from the Intent.
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
+            if (intent != null) {
+                if (MokoConstants.ACTION_DISCOVER_SUCCESS.equals(intent.getAction())) {
+                    abortBroadcast();
+                    if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
+                        mDialog.dismiss();
+                    }
+                    Toast.makeText(MainActivity.this, "Connect success", Toast.LENGTH_SHORT).show();
+                    //Intent orderIntent = new Intent(MainActivity.this, SendOrderActivity.class);
+                   // orderIntent.putExtra("device", mDevice);
+                    //startActivity(orderIntent);
+                }
+                if (MokoConstants.ACTION_CONN_STATUS_DISCONNECTED.equals(intent.getAction())) {
+                    abortBroadcast();
+                    if (MokoSupport.getInstance().isBluetoothOpen() && MokoSupport.getInstance().getReconnectCount() > 0) {
+                        return;
+                    }
+                    if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
+                        mDialog.dismiss();
+                    }
+                    Toast.makeText(MainActivity.this, "Connect failed", Toast.LENGTH_SHORT).show();
+                }
             }
+        }
+    };
+
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            mService = ((MokoService.LocalBinder) service).getService();
+            // 注册广播接收器
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(MokoConstants.ACTION_CONN_STATUS_DISCONNECTED);
+            filter.addAction(MokoConstants.ACTION_DISCOVER_SUCCESS);
+            filter.setPriority(100);
+            registerReceiver(mReceiver, filter);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
         }
     };
 
@@ -145,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         super.onDestroy();
 
         // Don't forget to unregister the ACTION_FOUND receiver.
-        unregisterReceiver(receiver);
+        unregisterReceiver(mReceiver);
     }
 
 
@@ -373,7 +414,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         }
         mDatas.clear();
         mDatas.addAll(deviceMap.values());
-        Log.d("Bluetooth","Finished Scanning:");
+        Log.d("Bluetooth","Finished Scanning");
         //mAdapter.notifyDataSetChanged();
     }
 }

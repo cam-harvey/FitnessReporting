@@ -72,6 +72,13 @@
             android:onClick="sync"
             android:text="@string/sync_button" />
 
+        <Button
+            android:id="@+id/bluetoothSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="scan"
+            android:text="Search" />
+
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>

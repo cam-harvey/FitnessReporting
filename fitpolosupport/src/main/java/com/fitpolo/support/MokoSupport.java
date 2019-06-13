@@ -132,7 +132,9 @@ public class MokoSupport implements MokoResponseCallback {
     }
 
     public void startScanDevice(final MokoScanDeviceCallback mokoScanDeviceCallback) {
+
         if (!isBluetoothOpen()) {
+
             mokoScanDeviceCallback.onStopScan();
             return;
         }
