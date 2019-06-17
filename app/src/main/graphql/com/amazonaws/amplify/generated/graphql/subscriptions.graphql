@@ -70,17 +70,20 @@ subscription OnCreateLastUpdatedTime(
   $member: String
   $timestamp: AWSDateTime
   $type: String
+  $device: String
 ) {
   onCreateLastUpdatedTime(
     id: $id
     member: $member
     timestamp: $timestamp
     type: $type
+    device: $device
   ) {
     id
     member
     timestamp
     type
+    device
   }
 }
 subscription OnUpdateLastUpdatedTime(
@@ -88,17 +91,20 @@ subscription OnUpdateLastUpdatedTime(
   $member: String
   $timestamp: AWSDateTime
   $type: String
+  $device: String
 ) {
   onUpdateLastUpdatedTime(
     id: $id
     member: $member
     timestamp: $timestamp
     type: $type
+    device: $device
   ) {
     id
     member
     timestamp
     type
+    device
   }
 }
 subscription OnDeleteLastUpdatedTime(
@@ -106,16 +112,19 @@ subscription OnDeleteLastUpdatedTime(
   $member: String
   $timestamp: AWSDateTime
   $type: String
+  $device: String
 ) {
   onDeleteLastUpdatedTime(
     id: $id
     member: $member
     timestamp: $timestamp
     type: $type
+    device: $device
   ) {
     id
     member
     timestamp
     type
+    device
   }
 }

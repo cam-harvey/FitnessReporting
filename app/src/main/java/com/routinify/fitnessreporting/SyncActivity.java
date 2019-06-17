@@ -1,10 +1,6 @@
 package com.routinify.fitnessreporting;
 
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothHealth;
-import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,23 +10,15 @@ import android.content.ServiceConnection;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.ParcelUuid;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.amazonaws.amplify.generated.graphql.CreateFitnessDataMutation;
 import com.amazonaws.amplify.generated.graphql.CreateLastUpdatedTimeMutation;
-import com.amazonaws.amplify.generated.graphql.GetLastUpdatedTimeQuery;
-import com.amazonaws.amplify.generated.graphql.ListFitnessDataQuery;
 import com.amazonaws.amplify.generated.graphql.ListLastUpdatedTimesQuery;
 import com.amazonaws.amplify.generated.graphql.UpdateLastUpdatedTimeMutation;
 import com.amazonaws.mobile.config.AWSConfiguration;
@@ -41,107 +29,44 @@ import com.apollographql.apollo.api.Response;
 import com.apollographql.apollo.exception.ApolloException;
 import com.fitpolo.support.MokoConstants;
 import com.fitpolo.support.MokoSupport;
-import com.fitpolo.support.callback.MokoScanDeviceCallback;
 import com.fitpolo.support.entity.BleDevice;
-import com.fitpolo.support.handler.MokoLeScanHandler;
-import com.fitpolo.support.task.ZIntervalStepReadTask;
 import com.fitpolo.support.task.ZReadStepTask;
-import com.fitpolo.support.task.ZWriteShakeTask;
+import com.fitpolo.support.task.ZReadVersionTask;
 
-
-import java.text.DateFormat;
-import java.text.FieldPosition;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nonnull;
 
-
 import butterknife.ButterKnife;
-import type.CreateFitnessDataInput;
 import type.CreateLastUpdatedTimeInput;
 import type.TableLastUpdatedTimeFilterInput;
 import type.TableStringFilterInput;
 import type.UpdateLastUpdatedTimeInput;
 
-import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
-import no.nordicsemi.android.support.v18.scanner.ScanFilter;
-import no.nordicsemi.android.support.v18.scanner.ScanSettings;
+public class SyncActivity extends AppCompatActivity{
 
-
-public class MainActivity extends AppCompatActivity implements MokoScanDeviceCallback {
     private AWSAppSyncClient mAWSAppSyncClient;
+    private BleDevice mDevice;
+    private boolean mIsUpgrade;
+    private MokoService mService;
+    private boolean processing;
     private String lastUpdatedString;
     private String lastUpdatedId;
-    private boolean processing;
-    private BluetoothHealth smartWatch;
-    private static final UUID SERVICE_UUID = UUID.fromString("0000ffc0-0000-1000-8000-00805f9b34fb");
-    private static final long SCAN_PERIOD = 5000;
 
-    private ArrayList<BleDevice> mDatas;
-    //private DeviceAdapter mAdapter;
-    private ProgressDialog mDialog;
-    private MokoService mService;
-    private BleDevice mDevice;
-    private HashMap<String, BleDevice> deviceMap;
-    private ArrayList<CreateFitnessDataInput> fitnessData;
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_query_results);
 
-        /*
-        This builds the appsync client
-         */
         mAWSAppSyncClient = AWSAppSyncClient.builder()
                 .context(getApplicationContext())
                 .awsConfiguration(new AWSConfiguration(getApplicationContext()))
                 .build();
 
         ButterKnife.bind(this);
+        mDevice = (BleDevice) getIntent().getSerializableExtra("device");
         bindService(new Intent(this, MokoService.class), mServiceConnection, BIND_AUTO_CREATE);
-        mDialog = new ProgressDialog(this);
-        mDatas = new ArrayList<>();
-        deviceMap = new HashMap<>();
-
-        MokoSupport.getInstance().init(this.getApplicationContext());
-        //bluetoothAdapter.getProfileProxy(getApplicationContext(), profileListener, BluetoothProfile.HEALTH);
-
-        //IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        //registerReceiver(mReceiver, filter);
-
     }
-
-    public void scan(View view){
-        processing = true;
-        MokoSupport.getInstance().startScanDevice(this);
-
-
-
-    }
-
-    public void connect(View view){
-        mDialog.setMessage("Connect...");
-        mDialog.show();
-        //Device query for mac address
-        BleDevice device = null;
-        for(BleDevice bleDevice:mDatas) {
-            if (bleDevice.address.contains("F4:42"))
-                device = bleDevice;
-        }
-        mService.connectBluetoothDevice(device.address);
-        mDevice = device;
-    }
-
-
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -149,25 +74,22 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent != null) {
-                if (MokoConstants.ACTION_DISCOVER_SUCCESS.equals(intent.getAction())) {
-                    abortBroadcast();
-                    if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
-                        mDialog.dismiss();
+                String action = intent.getAction();
+                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                    int blueState = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
+                    switch (blueState) {
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                        case BluetoothAdapter.STATE_OFF:
+                            SyncActivity.this.finish();
+                            break;
                     }
-                    Toast.makeText(MainActivity.this, "Connect success", Toast.LENGTH_SHORT).show();
-                    Intent orderIntent = new Intent(MainActivity.this, SyncActivity.class);
-                   orderIntent.putExtra("device", mDevice);
-                    //startActivity(orderIntent);
                 }
-                if (MokoConstants.ACTION_CONN_STATUS_DISCONNECTED.equals(intent.getAction())) {
+                if (MokoConstants.ACTION_CONN_STATUS_DISCONNECTED.equals(action)) {
                     abortBroadcast();
-                    if (MokoSupport.getInstance().isBluetoothOpen() && MokoSupport.getInstance().getReconnectCount() > 0) {
-                        return;
+                    if (!mIsUpgrade) {
+                        Toast.makeText(SyncActivity.this, "Connect failed", Toast.LENGTH_SHORT).show();
+                        SyncActivity.this.finish();
                     }
-                    if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
-                        mDialog.dismiss();
-                    }
-                    Toast.makeText(MainActivity.this, "Connect failed", Toast.LENGTH_SHORT).show();
                 }
             }
         }
@@ -181,14 +103,20 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             // 注册广播接收器
             IntentFilter filter = new IntentFilter();
             filter.addAction(MokoConstants.ACTION_CONN_STATUS_DISCONNECTED);
-            filter.addAction(MokoConstants.ACTION_DISCOVER_SUCCESS);
-            filter.setPriority(100);
+            filter.addAction(MokoConstants.ACTION_DISCOVER_TIMEOUT);
+            filter.addAction(MokoConstants.ACTION_ORDER_RESULT);
+            filter.addAction(MokoConstants.ACTION_ORDER_TIMEOUT);
+            filter.addAction(MokoConstants.ACTION_ORDER_FINISH);
+            filter.addAction(MokoConstants.ACTION_CURRENT_DATA);
+            filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+            filter.setPriority(200);
             registerReceiver(mReceiver, filter);
+            // first
+            MokoSupport.getInstance().sendOrder(new ZReadVersionTask(mService));
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.d("StartUp","Failure");
         }
     };
 
@@ -199,50 +127,9 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         // Don't forget to unregister the ACTION_FOUND receiver.
         unregisterReceiver(mReceiver);
         unbindService(mServiceConnection);
-        stopService(new Intent(this, MokoService.class));
-    }
-
-
-
-    public void findLastUpdated(View view){
-
-        /*
-        Getting the strings from the entry fields
-         */
-        Spinner dataTypeSpinner = findViewById(R.id.spinner);
-        String dataType = dataTypeSpinner.getSelectedItem().toString();
-        TextView memberId = findViewById(R.id.memberText);
-        String memberIdText = memberId.getText().toString();
-
-        //Runs the query to find the last update time for a fitness data type
-        processing = true;
-        runQuery(memberIdText,dataType);
-
-        while(processing){
-
-        }
-        //displays the last updated time
-        if(lastUpdatedString!=null){
-            TextView lastUpdatedText = findViewById(R.id.lastUpdatedText);
-            //lastUpdatedText.setText(lastUpdatedString);
-        }
-
-        ConnectivityManager cm =
-                (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (!isConnected) {
-            finish();
-        }
     }
 
     public void sync(View view){
-        /*
-        Getting the strings from the entry fields
-         */
         Spinner dataTypeSpinner = findViewById(R.id.spinner);
         String dataType = dataTypeSpinner.getSelectedItem().toString();
         TextView memberId = findViewById(R.id.memberText);
@@ -258,32 +145,19 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         /*
         Setting up current time to pass to the update
          */
-            Calendar currentCal = Calendar.getInstance();
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-            String currentTimeString = formatter.format(currentCal.getTime());
-            currentTimeString = currentTimeString.substring(0, 23);
-            currentTimeString = currentTimeString.concat("Z");
-            Log.d("DateTime:", currentTimeString);
-        processing = true;
+        Calendar currentCal = Calendar.getInstance();
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        String currentTimeString = formatter.format(currentCal.getTime());
+        currentTimeString = currentTimeString.substring(0, 23);
+        currentTimeString = currentTimeString.concat("Z");
+        Log.d("DateTime:", currentTimeString);
         if(lastUpdatedString!=null) {
             runUpdateMutation(memberIdText, currentTimeString, dataType,mDevice.address);
         }
         else{
             runCreateUpdateMutation(memberIdText,currentTimeString,dataType,mDevice.address);
         }
-        while(processing){
 
-        }
-        ConnectivityManager cm =
-                (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
-                activeNetwork.isConnectedOrConnecting();
-
-        if (!isConnected) {
-            //finish();
-        }
         Calendar calendar;
         if(lastUpdatedString!=null) {
             calendar = Utils.strDate2Calendar(lastUpdatedString, AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
@@ -291,8 +165,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         else{
             calendar = Utils.strDate2Calendar("2000-01-01'T'00:00:00.000'Z'", AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
         }
-        MokoSupport.getInstance().sendOrder(new ZIntervalStepReadTask(mService, calendar));
-
+        MokoSupport.getInstance().sendOrder(new ZReadStepTask(mService, calendar));
     }
 
     public void runUpdateMutation(String member,String timestamp,String type,String device){
@@ -317,9 +190,9 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         @Override
         public void onResponse(@Nonnull Response<UpdateLastUpdatedTimeMutation.Data> response) {
 
-                    Log.i("Results", "Updated Last Update Time");
-                    processing = false;
-                    //finish();
+            Log.i("Results", "Updated Last Update Time");
+            processing = false;
+            finish();
 
 
 
@@ -361,18 +234,18 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             Log.d("Query","Got here");
 
             if(response.data().listLastUpdatedTimes()!=null)
-            if(response.data().listLastUpdatedTimes().items().size()!=0) {
+                if(response.data().listLastUpdatedTimes().items().size()!=0) {
 
-                Log.i("Results", "\n\nID:"+response.data().listLastUpdatedTimes().items().get(0).id() + "\n" + response.data().listLastUpdatedTimes().items().get(0).timestamp()+"\n\n\n");
-                lastUpdatedString = response.data().listLastUpdatedTimes().items().get(0).timestamp();
-                lastUpdatedId = response.data().listLastUpdatedTimes().items().get(0).id();
-                processing = false;
-            }
-            else {
-                Log.d("Results","Null result");
-                processing = false;
-            }
-            //finish();
+                    Log.i("Results", "\n\nID:"+response.data().listLastUpdatedTimes().items().get(0).id() + "\n" + response.data().listLastUpdatedTimes().items().get(0).timestamp()+"\n\n\n");
+                    lastUpdatedString = response.data().listLastUpdatedTimes().items().get(0).timestamp();
+                    lastUpdatedId = response.data().listLastUpdatedTimes().items().get(0).id();
+                    processing = false;
+                }
+                else {
+                    Log.d("Results","Null result");
+                    processing = false;
+                }
+            finish();
         }
 
 
@@ -392,10 +265,12 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
                 device(device).
                 build();
         Log.d("Mutation",createLastUpdatedTimeInput.toString());
-
+        processing = true;
         mAWSAppSyncClient.mutate(CreateLastUpdatedTimeMutation.builder().input(createLastUpdatedTimeInput).build())
                 .enqueue(createMutationCallback);
+        while(processing){
 
+        }
         Log.d("Mutation","Mutation finished");
     }
 
@@ -404,9 +279,9 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         public void onResponse(@Nonnull Response<CreateLastUpdatedTimeMutation.Data> response) {
 
 
-                    Log.i("Results", "Updated Last Update Time");
-                    processing = false;
-                    //finish();
+            Log.i("Results", "Updated Last Update Time");
+            processing = false;
+            finish();
 
 
 
@@ -419,30 +294,4 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             processing = false;
         }
     };
-
-    @Override
-    public void onStartScan() {
-        deviceMap.clear();
-        mDialog.setMessage("Scanning...");
-        mDialog.show();
-    }
-
-    @Override
-    public void onScanDevice(BleDevice device) {
-        deviceMap.put(device.address, device);
-        mDatas.clear();
-        mDatas.addAll(deviceMap.values());
-        //mAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    public void onStopScan() {
-        if (!MainActivity.this.isFinishing() && mDialog.isShowing()) {
-            mDialog.dismiss();
-        }
-        mDatas.clear();
-        mDatas.addAll(deviceMap.values());
-        Log.d("Bluetooth","Finished Scanning");
-        processing = false;
-    }
 }

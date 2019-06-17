@@ -19,33 +19,6 @@
             android:textSize="36sp" />
 
         <TextView
-            android:id="@+id/memberTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/member_id_title"
-            android:textSize="24sp" />
-
-        <EditText
-            android:id="@+id/memberText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="textPersonName" />
-
-        <TextView
-            android:id="@+id/dataTypeTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/data_type_title"
-            android:textSize="24sp" />
-
-        <Spinner
-            android:id="@+id/spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:entries="@array/type_spinner_values" />
-
-        <TextView
             android:id="@+id/lastUpdatedTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -66,18 +39,52 @@
             android:text="@string/last_updated_button" />
 
         <Button
-            android:id="@+id/mutationButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:onClick="sync"
-            android:text="@string/sync_button" />
-
-        <Button
             android:id="@+id/bluetoothSearch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:onClick="scan"
             android:text="Search" />
+
+        <Button
+            android:id="@+id/connectButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="connect"
+            android:text="Connect" />
+
+        <Button
+            android:id="@+id/syncButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="sync"
+            android:text="Sync" />
+
+        <TextView
+            android:id="@+id/dataTypeTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/data_type_title"
+            android:textSize="24sp" />
+
+        <Spinner
+            android:id="@+id/spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/type_spinner_values" />
+
+        <TextView
+            android:id="@+id/memberTitle2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/member_id_title"
+            android:textSize="24sp" />
+
+        <EditText
+            android:id="@+id/memberText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName" />
 
     </LinearLayout>
 

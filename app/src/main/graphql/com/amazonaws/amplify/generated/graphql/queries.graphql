@@ -37,6 +37,7 @@ query GetLastUpdatedTime(
       member
       timestamp
       type
+      device
     }
     nextToken
   }
@@ -52,6 +53,7 @@ query ListLastUpdatedTimes(
       member
       timestamp
       type
+      device
     }
     nextToken
   }
