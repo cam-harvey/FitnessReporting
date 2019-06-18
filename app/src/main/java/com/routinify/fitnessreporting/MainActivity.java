@@ -43,10 +43,21 @@ import com.fitpolo.support.MokoConstants;
 import com.fitpolo.support.MokoSupport;
 import com.fitpolo.support.callback.MokoScanDeviceCallback;
 import com.fitpolo.support.entity.BleDevice;
+import com.fitpolo.support.entity.DailySleep;
+import com.fitpolo.support.entity.HeartRate;
+import com.fitpolo.support.entity.Step;
 import com.fitpolo.support.handler.MokoLeScanHandler;
 import com.fitpolo.support.task.ZIntervalStepReadTask;
+import com.fitpolo.support.task.ZReadBatteryTask;
+import com.fitpolo.support.task.ZReadHeartRateIntervalTask;
+import com.fitpolo.support.task.ZReadHeartRateTask;
+import com.fitpolo.support.task.ZReadSleepGeneralTask;
+import com.fitpolo.support.task.ZReadStepInterval;
 import com.fitpolo.support.task.ZReadStepTask;
+import com.fitpolo.support.task.ZWriteHeartRateIntervalTask;
 import com.fitpolo.support.task.ZWriteShakeTask;
+import com.fitpolo.support.task.ZWriteStepIntervalTask;
+import com.fitpolo.support.task.ZWriteSystemTimeTask;
 
 
 import java.text.DateFormat;
@@ -58,6 +69,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Timer;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
@@ -79,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
     private AWSAppSyncClient mAWSAppSyncClient;
     private String lastUpdatedString;
     private String lastUpdatedId;
+    private String deviceMAC;
     private boolean processing;
     private BluetoothHealth smartWatch;
     private static final UUID SERVICE_UUID = UUID.fromString("0000ffc0-0000-1000-8000-00805f9b34fb");
@@ -91,6 +104,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
     private BleDevice mDevice;
     private HashMap<String, BleDevice> deviceMap;
     private ArrayList<CreateFitnessDataInput> fitnessData;
+    private ArrayList<Step> mySteps;
 
 
     @Override
@@ -131,14 +145,32 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
     public void connect(View view){
         mDialog.setMessage("Connect...");
         mDialog.show();
-        //Device query for mac address
-        BleDevice device = null;
-        for(BleDevice bleDevice:mDatas) {
-            if (bleDevice.address.contains("F4:42"))
-                device = bleDevice;
+
+        TextView memberId = findViewById(R.id.memberText);
+        String memberIdText = memberId.getText().toString();
+
+        processing = true;
+        runQuery(memberIdText,null);
+
+        while(processing){
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-        mService.connectBluetoothDevice(device.address);
-        mDevice = device;
+        if(deviceMAC!=null) {
+            //Device query for mac address
+            BleDevice device = null;
+            for (BleDevice bleDevice : mDatas) {
+                if (bleDevice.address.equals(deviceMAC))
+                    device = bleDevice;
+            }
+            if(device!=null) {
+                mService.connectBluetoothDevice(device.address);
+                mDevice = device;
+            }
+        }
     }
 
 
@@ -238,32 +270,57 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             finish();
         }
     }
-
-    public void sync(View view){
+    //Sync data with watch
+    public void sync(View view) {
         /*
         Getting the strings from the entry fields
          */
         Spinner dataTypeSpinner = findViewById(R.id.spinner);
-        String dataType = dataTypeSpinner.getSelectedItem().toString();
+        final String dataType = dataTypeSpinner.getSelectedItem().toString();
         TextView memberId = findViewById(R.id.memberText);
-        String memberIdText = memberId.getText().toString();
+        final String memberIdText = memberId.getText().toString();
 
         //Runs the query to find the last update time for a fitness data type
         processing = true;
-        runQuery(memberIdText,dataType);
+        runQuery(memberIdText, dataType);
 
-        while(processing){
-
+        while (processing) {
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
         /*
-        Setting up current time to pass to the update
+        Setting up current battery to pass to the update
          */
+
+        MokoSupport.getInstance().setProcessing(true);
+        batteryRead();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (MokoSupport.getInstance().getProcessing()) {
+                    try {
+                        Thread.sleep(1000L);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+                finishSync(dataType,memberIdText);
+                //Thread.join();
+            }
+        }).start();
+
+    }
+        public void finishSync(String dataType,String memberIdText){
+
             Calendar currentCal = Calendar.getInstance();
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
             String currentTimeString = formatter.format(currentCal.getTime());
-            currentTimeString = currentTimeString.substring(0, 23);
-            currentTimeString = currentTimeString.concat("Z");
+            currentTimeString = convert2ValidAWSDateTime(currentTimeString);
             Log.d("DateTime:", currentTimeString);
+            //currentTimeString = "2019-06-17'T'12:00:00.000Z";
         processing = true;
         if(lastUpdatedString!=null) {
             runUpdateMutation(memberIdText, currentTimeString, dataType,mDevice.address);
@@ -272,6 +329,11 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             runCreateUpdateMutation(memberIdText,currentTimeString,dataType,mDevice.address);
         }
         while(processing){
+            try {
+                Thread.sleep(1000L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
         }
         ConnectivityManager cm =
@@ -284,32 +346,266 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         if (!isConnected) {
             //finish();
         }
-        Calendar calendar;
+        //Calendar calendar;
         if(lastUpdatedString!=null) {
-            calendar = Utils.strDate2Calendar(lastUpdatedString, AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
+            //final Calendar calendar = Utils.strDate2Calendar(lastUpdatedString, AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
         }
         else{
-            calendar = Utils.strDate2Calendar("2000-01-01'T'00:00:00.000'Z'", AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
+            //final Calendar calendar = Utils.strDate2Calendar("2000-01-01'T'00:00:00.000'Z'", AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
         }
-        MokoSupport.getInstance().sendOrder(new ZIntervalStepReadTask(mService, calendar));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //MokoSupport.getInstance().setProcessing(true);
+                Calendar calendar = Utils.strDate2Calendar(lastUpdatedString, AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
+
+                MokoSupport.getInstance().sendOrder(new ZWriteSystemTimeTask(mService));
+                MokoSupport.getInstance().sendOrder(new ZWriteStepIntervalTask(mService,1));
+
+
+                MokoSupport.getInstance().sendOrder(new ZWriteHeartRateIntervalTask(mService,1));
+
+                //MokoSupport.getInstance().sendOrder(new ZReadStepInterval(mService));
+
+                //MokoSupport.getInstance().sendOrder(new ZReadHeartRateIntervalTask(mService));
+
+                MokoSupport.getInstance().setStepprocessing(true);
+                MokoSupport.getInstance().sendOrder(new ZIntervalStepReadTask(mService, calendar));
+
+                MokoSupport.getInstance().setHeartprocessing(true);
+                MokoSupport.getInstance().sendOrder(new ZReadHeartRateTask(mService,calendar));
+
+                MokoSupport.getInstance().setSleepprocessing(true);
+                MokoSupport.getInstance().sendOrder(new ZReadSleepGeneralTask(mService,calendar));
+
+
+
+            }
+        }).start();
+
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(MokoSupport.getInstance().getProcessing()){
+                    try
+                    {
+                        Thread.sleep(100L);
+                    }
+                    catch (InterruptedException e1)
+                    {
+                        e1.printStackTrace();
+                    }
+                }
+                transferSyncData();
+            }
+        }).start();
 
     }
+
+    public void batteryRead(){
+
+        MokoSupport.getInstance().sendOrder((new ZReadBatteryTask(mService)));
+    }
+    public String convert2ValidAWSDateTime(String original){
+        String newString;
+        original = original.substring(0, 26);
+        newString = original.concat(":00");
+        return newString;
+    }
+
+    public void transferSyncData(){
+
+        //Transfer steps
+        Log.d("Syncing:","Data recorded successfully");
+        mySteps = MokoSupport.getInstance().getSteps();
+
+        Step previousStep = null;
+        final String[] member = new String[1];
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                TextView memberView = findViewById(R.id.memberText);
+                member[0] = memberView.getText().toString();
+            }
+        });
+        //if(member[0]==null) {
+        //    return;
+        //}
+
+
+        //Tell them to enter member
+
+
+
+        int stepValue = 0;
+        List<Integer> data= new ArrayList<Integer>();
+        String startTime;
+        String endTime;
+        Calendar currentTime;
+        Calendar updateTime = Utils.strDate2Calendar(lastUpdatedString,"yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        Calendar previousTime=null;
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        if(mySteps!=null)
+        for(Step currentStep: mySteps){
+            currentTime = Utils.strDate2Calendar(currentStep.time,"yyyy-MM-dd HH:mm");
+            if(currentTime.compareTo(updateTime)>=0){
+                if(previousStep!=null&& previousTime!=null){
+                    startTime = convert2ValidAWSDateTime(formatter.format(previousTime.getTime()));
+                    endTime = convert2ValidAWSDateTime(formatter.format(currentTime.getTime()));
+                    if(previousTime.get(Calendar.HOUR_OF_DAY)==0&&previousTime.get(Calendar.MINUTE)==0){
+                        stepValue = Integer.parseInt(currentStep.value);
+                    }
+                    else{
+                        stepValue = Integer.parseInt(currentStep.value)-Integer.parseInt(previousStep.value);
+                    }
+                    data.add(stepValue);
+                    String tempID = UUID.randomUUID().toString();
+                    processing = true;
+                    createFitnessDataMutation(tempID,member[0],startTime,endTime,"Steps",new ArrayList<Integer>(data));
+                    while(processing){
+                        try {
+                            Thread.sleep(1000L);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    data.clear();
+                }
+            }
+            previousStep = currentStep;
+            previousTime = currentTime;
+        }
+        //Transfer Sleep
+        Calendar startCalendar;
+        Calendar endCalendar;
+        String lastRecord=null;
+        int sleepType=0;
+        int count=0;
+        ArrayList<DailySleep> mSleep = MokoSupport.getInstance().getDailySleeps();
+        if(mSleep!=null){
+            for(DailySleep dailySleep:mSleep){
+                startCalendar = Utils.strDate2Calendar(dailySleep.startTime,"yyyy-MM-dd HH:mm");
+                endCalendar = Utils.strDate2Calendar(dailySleep.startTime,"yyyy-MM-dd HH:mm");
+                for(String record:dailySleep.records){
+                    if(lastRecord!=null){
+                        count+=5;
+                        endCalendar.add(Calendar.MINUTE,5);
+                        if(!lastRecord.equals(record)) {
+
+                            String tempID = UUID.randomUUID().toString();
+                            switch (lastRecord) {
+                                case "10":
+                                    sleepType = 2;
+                                    break;
+                                case "01":
+                                    sleepType = 1;
+                                    break;
+                            }
+                            data.add(sleepType);
+                            startTime = convert2ValidAWSDateTime(formatter.format(startCalendar.getTime()));
+                            endTime = convert2ValidAWSDateTime(formatter.format(endCalendar.getTime()));
+                            if(endCalendar.compareTo(updateTime)>=0) {
+                                processing = true;
+                                createFitnessDataMutation(tempID, member[0], startTime, endTime, "Sleep", new ArrayList<Integer>(data));
+                                while (processing) {
+                                    try {
+                                        Thread.sleep(1000L);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                            data.clear();
+                            startCalendar.add(Calendar.MINUTE,count);
+                            count = 0;
+                        }
+                    }
+                    lastRecord=record;
+                    sleepType=0;
+                }
+                lastRecord=null;
+            }
+        }
+        //Transfer HeartRate
+        ArrayList<HeartRate> mHeart = MokoSupport.getInstance().getHeartRates();
+
+        if(mHeart!=null){
+            for(HeartRate heartRate:mHeart){
+                currentTime = Utils.strDate2Calendar(heartRate.time,"yyyy-MM-dd HH:mm");
+                if(currentTime.compareTo(updateTime)>=0){
+
+                        startTime = convert2ValidAWSDateTime(formatter.format(currentTime.getTime()));
+                        endTime = convert2ValidAWSDateTime(formatter.format(currentTime.getTime()));
+
+                        data.add(Integer.parseInt(heartRate.value));
+                        String tempID = UUID.randomUUID().toString();
+                        processing = true;
+                        createFitnessDataMutation(tempID,member[0],startTime,endTime,"heartRate",new ArrayList<Integer>(data));
+                        while(processing){
+                            try {
+                                Thread.sleep(1000L);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        data.clear();
+
+                }
+
+            }
+        }
+        //Update Battery
+    }
+
+    public void createFitnessDataMutation(String id,String member,String startTime,String endTime,String type,List<Integer> data){
+        CreateFitnessDataInput createFitnessDataInput = CreateFitnessDataInput.builder()
+                .id(id)
+                .memberId(member)
+                .startDate(startTime)
+                .endDate(endTime)
+                .type(type)
+                .value(data)
+                .build();
+        mAWSAppSyncClient.mutate(CreateFitnessDataMutation.builder().input(createFitnessDataInput).build())
+                .enqueue(createFitnessDataCallback);
+    }
+
+    private GraphQLCall.Callback<CreateFitnessDataMutation.Data> createFitnessDataCallback = new GraphQLCall.Callback<CreateFitnessDataMutation.Data>() {
+        @Override
+        public void onResponse(@Nonnull Response<CreateFitnessDataMutation.Data> response) {
+
+            Log.i("Results", "Created New Fitness Data");
+            processing = false;
+            //finish();
+
+
+
+        }
+
+        @Override
+        public void onFailure(@Nonnull ApolloException e) {
+            Log.e("Error", e.toString());
+            processing = false;
+        }
+    };
 
     public void runUpdateMutation(String member,String timestamp,String type,String device){
         UpdateLastUpdatedTimeInput updateLastUpdatedTimeInput = UpdateLastUpdatedTimeInput.builder().
                 id(lastUpdatedId).
                 member(member).
                 timestamp(timestamp).
-                type(type).
+                battery(MokoSupport.getInstance().getBatteryQuantity()).
+                //type(type).
                 device(device).
                 build();
         Log.d("Mutation",updateLastUpdatedTimeInput.toString());
-        processing = true;
+
         mAWSAppSyncClient.mutate(UpdateLastUpdatedTimeMutation.builder().input(updateLastUpdatedTimeInput).build())
                 .enqueue(mutationCallback);
-        while(processing){
+        //while(processing){
 
-        }
+        //}
         Log.d("Mutation","Mutation finished");
     }
 
@@ -337,10 +633,10 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
      */
     public void runQuery(@Nonnull String member,@Nonnull String type){
         TableStringFilterInput memberFilter = TableStringFilterInput.builder().eq(member).build();
-        TableStringFilterInput typeFilter = TableStringFilterInput.builder().eq(type).build();
+        //TableStringFilterInput typeFilter = TableStringFilterInput.builder().eq(type).build();
         TableLastUpdatedTimeFilterInput lastUpdatedFilter = TableLastUpdatedTimeFilterInput.builder()
                 .member(memberFilter)
-                .type(typeFilter)
+                //.type(typeFilter)
                 .build();
         mAWSAppSyncClient.query(ListLastUpdatedTimesQuery.builder()
                 .filter(lastUpdatedFilter)
@@ -360,12 +656,13 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         public void onResponse(@Nonnull final Response<ListLastUpdatedTimesQuery.Data> response) {
             Log.d("Query","Got here");
 
-            if(response.data().listLastUpdatedTimes()!=null)
+            //if(response.data().listLastUpdatedTimes()!=null){
             if(response.data().listLastUpdatedTimes().items().size()!=0) {
 
                 Log.i("Results", "\n\nID:"+response.data().listLastUpdatedTimes().items().get(0).id() + "\n" + response.data().listLastUpdatedTimes().items().get(0).timestamp()+"\n\n\n");
                 lastUpdatedString = response.data().listLastUpdatedTimes().items().get(0).timestamp();
                 lastUpdatedId = response.data().listLastUpdatedTimes().items().get(0).id();
+                deviceMAC = response.data().listLastUpdatedTimes().items().get(0).device();
                 processing = false;
             }
             else {
@@ -381,6 +678,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         @Override
         public void onFailure(@Nonnull ApolloException e) {
             Log.e("ERROR", e.toString());
+            processing = false;
         }
     };
 
@@ -445,4 +743,6 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         Log.d("Bluetooth","Finished Scanning");
         processing = false;
     }
+
+
 }

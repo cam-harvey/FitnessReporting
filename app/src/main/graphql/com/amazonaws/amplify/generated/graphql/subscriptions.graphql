@@ -84,6 +84,7 @@ subscription OnCreateLastUpdatedTime(
     timestamp
     type
     device
+    battery
   }
 }
 subscription OnUpdateLastUpdatedTime(
@@ -105,6 +106,7 @@ subscription OnUpdateLastUpdatedTime(
     timestamp
     type
     device
+    battery
   }
 }
 subscription OnDeleteLastUpdatedTime(
@@ -126,5 +128,6 @@ subscription OnDeleteLastUpdatedTime(
     timestamp
     type
     device
+    battery
   }
 }

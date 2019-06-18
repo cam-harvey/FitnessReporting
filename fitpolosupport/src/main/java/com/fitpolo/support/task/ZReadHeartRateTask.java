@@ -35,7 +35,7 @@ public class ZReadHeartRateTask extends OrderTask {
 
     public ZReadHeartRateTask(MokoOrderTaskCallback callback, Calendar lastSyncTime) {
         super(OrderType.HEART_RATE_CHARACTER, OrderEnum.Z_READ_HEART_RATE, callback, OrderTask.RESPONSE_TYPE_WRITE_NO_RESPONSE);
-
+        lastSyncTime.add(Calendar.MINUTE,-20);
         int year = lastSyncTime.get(Calendar.YEAR) - 2000;
         int month = lastSyncTime.get(Calendar.MONTH) + 1;
         int day = lastSyncTime.get(Calendar.DAY_OF_MONTH);
@@ -124,6 +124,7 @@ public class ZReadHeartRateTask extends OrderTask {
         MokoSupport.getInstance().setHeartRatesCount(heartRateCount);
         MokoSupport.getInstance().setHeartRates(heartRates);
         MokoSupport.getInstance().setHeartRatesMap(heartRatesMap);
+        MokoSupport.getInstance().setHeartprocessing(false);
         orderStatus = OrderTask.ORDER_STATUS_SUCCESS;
         MokoSupport.getInstance().pollTask();
         callback.onOrderResult(response);

@@ -38,6 +38,7 @@ query GetLastUpdatedTime(
       timestamp
       type
       device
+      battery
     }
     nextToken
   }
@@ -54,6 +55,7 @@ query ListLastUpdatedTimes(
       timestamp
       type
       device
+      battery
     }
     nextToken
   }

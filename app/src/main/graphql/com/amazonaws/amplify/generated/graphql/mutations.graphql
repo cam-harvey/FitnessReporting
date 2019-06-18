@@ -36,6 +36,7 @@ mutation CreateLastUpdatedTime($input: CreateLastUpdatedTimeInput!) {
     timestamp
     type
     device
+    battery
   }
 }
 mutation UpdateLastUpdatedTime($input: UpdateLastUpdatedTimeInput!) {
@@ -45,6 +46,7 @@ mutation UpdateLastUpdatedTime($input: UpdateLastUpdatedTimeInput!) {
     timestamp
     type
     device
+    battery
   }
 }
 mutation DeleteLastUpdatedTime($input: DeleteLastUpdatedTimeInput!) {
@@ -54,5 +56,6 @@ mutation DeleteLastUpdatedTime($input: DeleteLastUpdatedTimeInput!) {
     timestamp
     type
     device
+    battery
   }
 }

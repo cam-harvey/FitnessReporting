@@ -25,7 +25,7 @@ public class ZWriteHeartRateIntervalTask extends OrderTask {
         orderData[0] = (byte) MokoConstants.HEADER_WRITE_SEND;
         orderData[1] = (byte) order.getOrderHeader();
         orderData[2] = (byte) 0x01;
-        orderData[3] = (byte) (heartRateInterval * 10);
+        orderData[3] = (byte) (heartRateInterval);
     }
 
     @Override

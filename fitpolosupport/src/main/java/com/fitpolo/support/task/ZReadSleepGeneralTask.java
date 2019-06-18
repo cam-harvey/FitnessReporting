@@ -119,6 +119,7 @@ public class ZReadSleepGeneralTask extends OrderTask {
             // 请求完index后请求record
             ZReadSleepDetailTask sleepDetailTask = new ZReadSleepDetailTask(callback, lastSyncTime);
             MokoSupport.getInstance().sendCustomOrder(sleepDetailTask);
+            MokoSupport.getInstance().setSleepprocessing(false);
         } else {
             if (sleepGeneralCount != 0) {
                 return;
@@ -126,7 +127,7 @@ public class ZReadSleepGeneralTask extends OrderTask {
             MokoSupport.getInstance().setSleepIndexCount(sleepGeneralCount);
             MokoSupport.getInstance().setDailySleeps(dailySleeps);
             MokoSupport.getInstance().setSleepsMap(sleepsMap);
-
+            MokoSupport.getInstance().setSleepprocessing(false);
             orderStatus = OrderTask.ORDER_STATUS_SUCCESS;
             MokoSupport.getInstance().pollTask();
             callback.onOrderResult(response);

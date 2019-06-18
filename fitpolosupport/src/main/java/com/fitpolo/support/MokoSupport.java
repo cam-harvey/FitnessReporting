@@ -61,6 +61,8 @@ import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanFilter;
 import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
+
+
 /**
  * @Date 2017/5/10
  * @Author wenzheng.liu
@@ -100,6 +102,8 @@ public class MokoSupport implements MokoResponseCallback {
     public static DeviceTypeEnum deviceTypeEnum;
 
     private static volatile MokoSupport INSTANCE;
+
+    public static boolean processing = false;
 
     private MokoSupport() {
         mQueue = new LinkedBlockingQueue<>();
@@ -795,6 +799,7 @@ public class MokoSupport implements MokoResponseCallback {
 
     public void setSteps(ArrayList<Step> steps) {
         this.mSteps = steps;
+        //stepprocessing = false;
     }
 
     public HashMap<Integer,Boolean> getStepsMap() {
@@ -828,20 +833,45 @@ public class MokoSupport implements MokoResponseCallback {
     }
 
     public void setSleepIndexCount(int sleepIndexCount) {
+
         this.mSleepIndexCount = sleepIndexCount;
     }
 
+    public void setProcessing(boolean state){
+        processing = state;
+
+    }
+
+    //public boolean get
+    public boolean getProcessing(){
+        return processing||sleepprocessing||heartprocessing||stepprocessing;
+    }
+    public void setSleepprocessing(boolean state){
+        sleepprocessing=state;
+    }
+    public void setHeartprocessing(boolean state){
+        heartprocessing=state;
+    }
+    public void setStepprocessing(boolean state){
+
+    }
+    public boolean sleepprocessing;
+    public boolean heartprocessing;
+    public boolean stepprocessing;
 
     public int getSleepIndexCount() {
         return mSleepIndexCount;
     }
 
     public ArrayList<DailySleep> getDailySleeps() {
+
         return mDailySleeps;
+
     }
 
     public void setDailySleeps(ArrayList<DailySleep> dailySleeps) {
         this.mDailySleeps = dailySleeps;
+        //sleepprocessing = false;
     }
 
     public void setSleepRecordCount(int sleepRecordCount) {
@@ -889,7 +919,9 @@ public class MokoSupport implements MokoResponseCallback {
     }
 
     public void setHeartRates(ArrayList<HeartRate> heartRates) {
+
         this.mHeartRates = heartRates;
+        //heartprocessing = false;
     }
 
     public ArrayList<HeartRate> getHeartRates() {
@@ -912,7 +944,9 @@ public class MokoSupport implements MokoResponseCallback {
     private int mBatteryQuantity;
 
     public void setBatteryQuantity(int batteryQuantity) {
+
         this.mBatteryQuantity = batteryQuantity;
+        //processing = false;
     }
 
     public int getBatteryQuantity() {

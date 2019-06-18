@@ -8,7 +8,7 @@ package com.routinify.fitnessreporting;
  */
 public class AppConstants {
 
-    public static final String PATTERN_YYYY_MM_DD_HH_MM = "yyyy-MM-dd'T'HH:DD:ss.SSS'Z'";
+    public static final String PATTERN_YYYY_MM_DD_HH_MM = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";;
 
     public static final String EXTRA_CONN_COUNT = "extra_conn_count";
 

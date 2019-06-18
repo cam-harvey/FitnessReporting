@@ -43,7 +43,7 @@ public class ZReadBatteryTask extends OrderTask {
         int batteryQuantity = DigitalConver.byte2Int(value[3]);
         LogModule.i("电池电量：" + batteryQuantity);
         MokoSupport.getInstance().setBatteryQuantity(batteryQuantity);
-
+        MokoSupport.getInstance().setProcessing(false);
         LogModule.i(order.getOrderName() + "成功");
         orderStatus = OrderTask.ORDER_STATUS_SUCCESS;
 

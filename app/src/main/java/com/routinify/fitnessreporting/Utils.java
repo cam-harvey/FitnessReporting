@@ -23,7 +23,10 @@ public class Utils {
      * @return
      */
     public static Calendar strDate2Calendar(String strDate, String pattern) {
-        SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.US);
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern);
+        if(strDate.length()>26)
+            strDate = strDate.substring(0,26)+"00";
+        //strDate = strDate.substring(0,10)+" " + strDate.substring(11,16);
         try {
             Date date = sdf.parse(strDate);
             Calendar calendar = Calendar.getInstance();

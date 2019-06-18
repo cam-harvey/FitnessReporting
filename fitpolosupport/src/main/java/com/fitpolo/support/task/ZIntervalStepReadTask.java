@@ -31,6 +31,7 @@ public class ZIntervalStepReadTask extends OrderTask {
     public ZIntervalStepReadTask(MokoOrderTaskCallback callback, Calendar lastSyncTime) {
         super(OrderType.STEP_CHARACTER, OrderEnum.Z_READ_RECENT_STEPS, callback, OrderTask.RESPONSE_TYPE_WRITE_NO_RESPONSE);
 
+        lastSyncTime.add(Calendar.MINUTE,-30);
         int year = lastSyncTime.get(Calendar.YEAR) - 2000;
         int month = lastSyncTime.get(Calendar.MONTH) + 1;
         int day = lastSyncTime.get(Calendar.DAY_OF_MONTH);
@@ -47,7 +48,7 @@ public class ZIntervalStepReadTask extends OrderTask {
         orderData[5] = (byte) day;
         orderData[6] = (byte) hour;
         orderData[7] = (byte) minute;
-        LogModule.i("Made it here");
+        //LogModule.i("Made it here");
     }
 
     @Override
@@ -123,6 +124,7 @@ public class ZIntervalStepReadTask extends OrderTask {
         }
         MokoSupport.getInstance().setStepCount(stepCount);
         MokoSupport.getInstance().setSteps(steps);
+        MokoSupport.getInstance().setStepprocessing(false);
         orderStatus = OrderTask.ORDER_STATUS_SUCCESS;
         MokoSupport.getInstance().pollTask();
         callback.onOrderResult(response);
