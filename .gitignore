@@ -21,4 +21,5 @@ build/
 dist/
 node_modules/
 aws-exports.js
-awsconfiguration.json
+#awsconfiguration.json
+#Testing to see if adding this will allow project to compile
