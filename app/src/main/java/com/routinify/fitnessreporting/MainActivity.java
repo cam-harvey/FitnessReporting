@@ -602,7 +602,8 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             String start = "\nstartDate: " + response.data().createFitnessData().startDate();
             String end = "\nendDate: " + response.data().createFitnessData().endDate();
             String type = "\nType: " + response.data().createFitnessData().type();
-            Log.d("New Fitness Data Attributes:",member+start+end+type);
+            String data ="\nData: " + response.data().createFitnessData().value().get(0);
+            Log.d("New Fitness Data Attributes:",member+start+end+type+data);
             processing = false;
             //finish();
 
