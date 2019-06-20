@@ -1,0 +1,16 @@
+{
+    "UserAgent": "aws-amplify-cli/0.1.0",
+    "Version": "1.0",
+    "IdentityManager": {
+        "Default": {}
+    },
+    "AppSync": {
+        "Default": {
+            "ApiUrl": "https://g7af5ldlpngmvldmjvldxb6qwu.appsync-api.us-east-2.amazonaws.com/graphql",
+            "Region": "us-east-2",
+            "AuthMode": "API_KEY",
+            "ApiKey": "da2-2rtkeefnvfg25mta2bt4hzaa5i",
+            "ClientDatabasePrefix": "FitnessData API_API_KEY"
+        }
+    }
+}
