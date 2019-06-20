@@ -1,5 +1,6 @@
 package com.routinify.fitnessreporting;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -11,12 +12,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -119,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
                 .context(getApplicationContext())
                 .awsConfiguration(new AWSConfiguration(getApplicationContext()))
                 .build();
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.ACCESS_COARSE_LOCATION}, AppConstants.PERMISSION_REQUEST_CODE);
 
         ButterKnife.bind(this);
         bindService(new Intent(this, MokoService.class), mServiceConnection, BIND_AUTO_CREATE);
@@ -353,10 +359,14 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         else{
             //final Calendar calendar = Utils.strDate2Calendar("2000-01-01'T'00:00:00.000'Z'", AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
         }
+            MokoSupport.getInstance().setStepprocessing(true);
+            MokoSupport.getInstance().setHeartprocessing(true);
+            MokoSupport.getInstance().setSleepprocessing(true);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 //MokoSupport.getInstance().setProcessing(true);
+
                 Calendar calendar = Utils.strDate2Calendar(lastUpdatedString, AppConstants.PATTERN_YYYY_MM_DD_HH_MM);
 
                 MokoSupport.getInstance().sendOrder(new ZWriteSystemTimeTask(mService));
@@ -369,13 +379,13 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
 
                 //MokoSupport.getInstance().sendOrder(new ZReadHeartRateIntervalTask(mService));
 
-                MokoSupport.getInstance().setStepprocessing(true);
+
                 MokoSupport.getInstance().sendOrder(new ZIntervalStepReadTask(mService, calendar));
 
-                MokoSupport.getInstance().setHeartprocessing(true);
+
                 MokoSupport.getInstance().sendOrder(new ZReadHeartRateTask(mService,calendar));
 
-                MokoSupport.getInstance().setSleepprocessing(true);
+
                 MokoSupport.getInstance().sendOrder(new ZReadSleepGeneralTask(mService,calendar));
 
 
@@ -390,7 +400,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
                 while(MokoSupport.getInstance().getProcessing()){
                     try
                     {
-                        Thread.sleep(100L);
+                        Thread.sleep(1000L);
                     }
                     catch (InterruptedException e1)
                     {
@@ -421,6 +431,15 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         mySteps = MokoSupport.getInstance().getSteps();
 
         Step previousStep = null;
+
+        while(MokoSupport.getInstance().getProcessing()){
+            try{
+                mySteps = MokoSupport.getInstance().getSteps();
+                Thread.sleep(1000L);
+            }catch(InterruptedException e){
+
+            }
+        }
         final String[] member = new String[1];
         runOnUiThread(new Runnable() {
             @Override
@@ -476,6 +495,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
             previousStep = currentStep;
             previousTime = currentTime;
         }
+        MokoSupport.getInstance().setSteps(null);
         //Transfer Sleep
         Calendar startCalendar;
         Calendar endCalendar;
@@ -527,6 +547,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
                 lastRecord=null;
             }
         }
+        MokoSupport.getInstance().setDailySleeps(null);
         //Transfer HeartRate
         ArrayList<HeartRate> mHeart = MokoSupport.getInstance().getHeartRates();
 
@@ -555,6 +576,7 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
 
             }
         }
+        MokoSupport.getInstance().setHeartRates(null);
         //Update Battery
     }
 
@@ -576,6 +598,11 @@ public class MainActivity extends AppCompatActivity implements MokoScanDeviceCal
         public void onResponse(@Nonnull Response<CreateFitnessDataMutation.Data> response) {
 
             Log.i("Results", "Created New Fitness Data");
+            String member = "\nMember: " + response.data().createFitnessData().memberId();
+            String start = "\nstartDate: " + response.data().createFitnessData().startDate();
+            String end = "\nendDate: " + response.data().createFitnessData().endDate();
+            String type = "\nType: " + response.data().createFitnessData().type();
+            Log.d("New Fitness Data Attributes:",member+start+end+type);
             processing = false;
             //finish();
 
